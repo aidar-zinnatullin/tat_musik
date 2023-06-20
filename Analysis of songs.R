@@ -25,3 +25,7 @@ export_formattable <- function(f, file, width = "100%", height = "100%",
           delay = delay)
 }
 export_formattable(categ_table, "Figures/Song_Categories.jpeg")
+
+
+
+
