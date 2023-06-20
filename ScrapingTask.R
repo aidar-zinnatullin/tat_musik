@@ -11,27 +11,52 @@ library(stringr)
 library(tidyverse) 
 library(rvest)
 library(stringi)
+ccccccc <- read_html('https://erlar.ru/asongs')
+name_song <- html_nodes(ccccccc, '.views-field-title a') %>% html_text() %>% unlist()
+name_song
 
-scrape_deputies <- function(html){
-  deputities <- read_html(html)
+music <- html_nodes(ccccccc, 'td.views-field-tid') %>% html_text() %>% unlist()
+music
+
+lyrics <- html_nodes(ccccccc, 'td.views-field-tid-1') %>% html_text() %>% unlist()
+lyrics
+
+link_to <- html_nodes(ccccccc,'.views-field-title a')%>% 
+  html_attr("href") %>%unlist()
+link_to
+df_first_page <- data.frame(
+  name = name_song,
+  composer = music,
+  lyrics = lyrics,
+  link_to = link_to,
+  stringsAsFactors=F)
+
+
+scrape_meta_info <- function(html){
+  songs_info <- read_html(html)
   # variables that we're interested in
-  name <- html_nodes(deputities, '.fn a') %>% html_text() %>% unlist()
+  name_song <- html_nodes(songs_info, '.views-field-title a') %>% html_text() %>% unlist()
   
-  party <- html_nodes(deputities, '.org') %>% html_text() %>% unlist()
   
-  link_to <- html_nodes(deputities,'.fn a')%>% 
+  music <- html_nodes(songs_info, 'td.views-field-tid') %>% html_text() %>% unlist()
+  
+  lyrics <- html_nodes(songs_info, 'td.views-field-tid-1') %>% html_text() %>% unlist()
+  
+  
+  link_to <- html_nodes(songs_info,'.views-field-title a')%>% 
     html_attr("href") %>%unlist()
   
   # putting together into a data frame
   df <- data.frame(
-    name = name,
-    party = party,
+    name = name_song,
+    composer = music,
+    lyrics = lyrics,
     link_to = link_to,
     stringsAsFactors=F)
   return(df)
 }
 
-deputies_website <- list()
+songs_website <- list()
 
 base_url <- "https://erlar.ru/asongs?page="
 pages <- c(1:121)
@@ -41,14 +66,16 @@ for (i in 1:length(pages)){
   # prepare URL
   url <- paste(base_url, pages[i], sep="")
   # scrape website
-  deputies_website[[i]] <- scrape_deputies(url)
+  songs_website[[i]] <- scrape_meta_info(url)
   # wait a couple of seconds between URL calls
   Sys.sleep(2)
 }
 
 
-deputies_website <- do.call(rbind, deputies_website)
-save(deputies_website, file = 'Scraped/deputies_website_camera_all.RData')
+songs_website <- do.call(rbind, songs_website)
+songs_website <- rbind(df_first_page, songs_website)
+
+save(songs_website, file = 'List_of_Songs.RData')
 
 
 ###### Now I need to go through all the links from deputies_website
