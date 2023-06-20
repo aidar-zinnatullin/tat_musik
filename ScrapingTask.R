@@ -136,3 +136,5 @@ more_info_1$lyrics_text[1]
 table(more_info_1$category)
 save(more_info_1, file = 'data/Songs_Text.RData')
 
+
+
