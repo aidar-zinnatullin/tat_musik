@@ -83,9 +83,12 @@ save(songs_website, file = 'data/List_of_Songs.RData')
 
 ###### Now I need to go through all the links from songs_website
 library(magrittr)
-testing_checkings <- read_html(songs_website$link_to[2])
+library(purrr)
+testing_checkings <- read_html(songs_website$link_to[9])
 html_nodes(testing_checkings, '#main p') %>% html_text() %>% unlist()
-html_nodes(testing_checkings, '#artist') %>% html_text() %>% unlist()
+html_nodes(testing_checkings, '.last span') %>% html_text() %>% unlist()
+
+tryCatch({html_nodes(testing_checkings,'.submitted')%>% html_text()}, error = function(e) {NA})
 circo <- html_nodes(testing_checkings,'.datielettoriali > div , .datielettoriali h4') %>% html_text() %>% unlist()
 circo[1]
 
@@ -100,7 +103,7 @@ scrape_more_info <- function(html){
   
   rating <- html_nodes(links,'.fivestar-feedback-enabled') %>% html_text() %>% unlist()
   
-  # submitted <- html_nodes(links,'.submitted') %>% html_text() %>% unlist()
+  views <- html_nodes(links,'.last span') %>% html_text() %>% unlist()
   
     # putting together into a data frame
   df_more <- data.frame(
@@ -108,7 +111,7 @@ scrape_more_info <- function(html){
     name = title_song,
     category = category,
     rating = rating,
-    # submitted = submitted,
+    views = views,
     stringsAsFactors=F)
   return(df_more)
 }
@@ -123,7 +126,7 @@ for (i in 1:nrow(songs_website)){
   more_info[[i]] <- scrape_more_info(url)
   # wait a couple of seconds between URL calls
   Sys.sleep(1)
-}
+} # 18:00 - 20:32
 more_info_1 <- do.call(rbind, more_info)
 n_distinct(more_info_1$name)
 more_info_1 <- more_info_1 %>% 
