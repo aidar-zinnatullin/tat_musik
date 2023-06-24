@@ -5,6 +5,12 @@ library(tidyverse)
 library(tidytext)
 library(here)
 library(stringi)
+library(formattable)
+library(htmltools)
+library(writexl)
+library(webshot)
+webshot::install_phantomjs(force = TRUE)
+
 stemmed <-  read_csv("for_to_stemm.csv")
 load(here("data", "List_of_Songs.RData"))
 test_attempt <- left_join(stemmed, songs_website, by = "name")
@@ -69,6 +75,124 @@ options(scipen = 999)
 model1 <- lm(formula = votes~ scores+ views + fraction*category, data = test_attempt)
 summary(model1)
 
+# Load
+load("data/major_stat_analysis_data.RData")
+
+### Таблица для категорий песен по количеству просмотров
+# categories_desc_views <- test_attempt %>% group_by(category) %>% summarise(n = sum(views)) %>% arrange(desc(n))
+
+categories_desc_views <- test_attempt %>% group_by(category) %>% summarise(n_songs = n(), n = sum(views)) %>% arrange(desc(n_songs))
+names(categories_desc_views) <- c("Категория", "Количество песен", "Количество просмотров") 
+categ_table <- formattable(categories_desc_views)
+
+export_formattable <- function(f, file, width = "100%", height = "100%", 
+                               background = "white", delay = 0.2)
+{
+  w <- as.htmlwidget(f, width = width, height = height)
+  path <- html_print(w, background = background, viewer = NULL)
+  url <- paste0("file:///", gsub("\\\\", "/", normalizePath(path)))
+  webshot(url,
+          file = file,
+          selector = ".formattable_widget",
+          delay = delay)
+}
+export_formattable(categ_table, "Figures/Song_Categories_Views.jpeg")
+
+write_xlsx(categories_desc_views, path = "excel_files/Categories_views.xlsx")
+
+# average views
+
+categories_desc_views_mean <- test_attempt %>% group_by(category) %>% summarise(n = sum(views)/n()) %>% arrange(desc(n))
+categories_desc_views_mean$n <- round(categories_desc_views_mean$n)
+names(categories_desc_views_mean) <- c("Категория", "Среднее количество просмотров")
+mean_views_table <- formattable(categories_desc_views_mean)
+
+export_formattable <- function(f, file, width = "100%", height = "100%", 
+                               background = "white", delay = 0.2)
+{
+  w <- as.htmlwidget(f, width = width, height = height)
+  path <- html_print(w, background = background, viewer = NULL)
+  url <- paste0("file:///", gsub("\\\\", "/", normalizePath(path)))
+  webshot(url,
+          file = file,
+          selector = ".formattable_widget",
+          delay = delay)
+}
+export_formattable(mean_views_table, "Figures/Mean_Categories_Views.jpeg")
+
+write_xlsx(categories_desc_views_mean, path = "excel_files/Mean_categories_views.xlsx")
+
+# Топ 10 песен по количеству просмотров
+top_10_songs <- test_attempt %>% select(name, views, category) %>% arrange(desc(views)) %>% slice_head(n = 10)
+names(top_10_songs) <- c("Название", "Количество просмотров", "Категория")
+formattable_top_10_songs <- formattable(top_10_songs)
+
+export_formattable <- function(f, file, width = "100%", height = "100%", 
+                               background = "white", delay = 0.2)
+{
+  w <- as.htmlwidget(f, width = width, height = height)
+  path <- html_print(w, background = background, viewer = NULL)
+  url <- paste0("file:///", gsub("\\\\", "/", normalizePath(path)))
+  webshot(url,
+          file = file,
+          selector = ".formattable_widget",
+          delay = delay)
+}
+export_formattable(formattable_top_10_songs, "Figures/Top_10_songs.jpeg")
+
+write_xlsx(top_10_songs, path = "excel_files/Top_10_songs.xlsx")
 
 
+# votes and scores
+top_10_votes <- test_attempt %>% select(name, votes, scores, category) %>% arrange(desc(votes)) %>% slice_head(n = 10)
+names(top_10_votes) <- c("Название", "Количество голосов","Оценка", "Категория")
+formattable_top_10_votes <- formattable(top_10_votes)
+
+export_formattable <- function(f, file, width = "100%", height = "100%", 
+                               background = "white", delay = 0.2)
+{
+  w <- as.htmlwidget(f, width = width, height = height)
+  path <- html_print(w, background = background, viewer = NULL)
+  url <- paste0("file:///", gsub("\\\\", "/", normalizePath(path)))
+  webshot(url,
+          file = file,
+          selector = ".formattable_widget",
+          delay = delay)
+}
+export_formattable(formattable_top_10_votes, "Figures/Top_10_votes.jpeg")
+
+write_xlsx(top_10_votes, path = "excel_files/Top_10_votes.xlsx")
+
+
+### Correlation
+names(test_attempt)
+ggplot(data = test_attempt, mapping = aes(x= log(views), y =fraction ))+
+  geom_point()+ 
+  xlab("Просмотры, логарифмированные")+
+  ylab("Уникальные слова в песнях")+
+  geom_smooth(method='lm')+
+  #geom_text(label = all_together_w_o$region_names)+
+  theme_classic()
+ggsave(filename = 'Figures/Views_Unique_words.jpeg', dpi = 300, width = 14, height = 8)
+
+cor(x = test_attempt$fraction, y = log(test_attempt$views))
+
+
+### Wordcloud
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(wordcloud2)
+docs <- Corpus(VectorSource(test_attempt$preproc))
+dtm <- TermDocumentMatrix(docs) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df <- data.frame(word = names(words),freq=words)
+set.seed(1234) # for reproducibility 
+
+jpeg("Figures/Wordcloud.jpeg", width = 8, height = 8, units = 'in', res = 500)
+wordcloud(words = df$word, freq = df$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"))
+dev.off()
 
