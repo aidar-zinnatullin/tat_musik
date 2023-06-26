@@ -105,7 +105,7 @@ third_6 %>%
             x = tf_idf, 
             by = category, 
             nrow = 15)
-ggsave(here("Figures", "Figure Third 6.jpeg"), width = 10, height = 6, dpi = 300)
+ggsave(here("Figures", "Figure Third 6.jpeg"), width = 10, height = 8, dpi = 300)
 
 # fourth six categories
 fourth <- unique(song_words$category)[19:24]
